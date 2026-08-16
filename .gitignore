@@ -1,0 +1,31 @@
+# Guardrails for a showcase-only repository: nothing executable or private
+# should ever land here.
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Never in this repo — the product source lives in a private repository
+*.py
+*.js
+*.ts
+*.html
+*.css
+*.sql
+*.db
+*.sqlite*
+*.log
+*.pem
+*.key
+.env
+.env.*
+node_modules/
+dist/
+build/
+__pycache__/
+*.map
+docker-compose*.yml
+Dockerfile*
