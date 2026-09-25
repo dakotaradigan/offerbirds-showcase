@@ -1,5 +1,8 @@
 <div align="center">
-  <img src="assets/offerbirds-logo.svg" alt="OfferBirds" width="360" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/offerbirds-logo-white.svg" />
+    <img src="assets/offerbirds-logo.svg" alt="OfferBirds" width="360" />
+  </picture>
   <h3>Your resume, ready to talk.</h3>
   <p><em>Your career agent. Always on.</em></p>
 </div>
@@ -63,8 +66,11 @@ From upload to a live, answering link takes about ten minutes.
 
 **For visitors**
 
-- Grounded chat: the agent answers only from the approved profile, and says
-  "that's not on the resume" rather than guessing
+- Grounded chat that streams token by token: the agent answers only from
+  the approved profile, and says "that's not on the resume" rather than
+  guessing
+- Long conversations stay coherent: older turns are compacted into a
+  rolling memo of what the visitor has asked, so context never overflows
 - Job-description fit analysis with structured output
 - Access-code-gated PDF download
 - An agent-interoperability endpoint (Model Context Protocol), so a
@@ -97,18 +103,19 @@ a surprise bill.
   <img src="assets/mobile-view.png" alt="Agent page on mobile" width="340" />
 </p>
 
-**Owner dashboard — sign-in**
+**Owner dashboard** — live status, share tools, the last 14 days of
+activity, and what visitors actually asked
 
-![Dashboard sign-in](assets/dashboard.png)
+![Owner dashboard overview for a demo profile](assets/dashboard.png)
 
 ## Architecture at a glance
 
 ![High-level architecture diagram](assets/architecture-overview.png)
 
-One deployment serves every user's agent page. A request to
-`yourname.offerbirds.com` is resolved to that person's tenant by hostname,
-and everything downstream — retrieval, generation, quotas, storage — is
-scoped to that single tenant:
+Any number of identical app instances serve every user's agent page; none
+holds state the others need. A request to `yourname.offerbirds.com` is
+resolved to that person's tenant by hostname, and everything downstream —
+retrieval, generation, quotas, storage — is scoped to that single tenant:
 
 - **Guardrails first.** Rate limits, daily caps, and cost budgets are
   reserved *before* any model call and refunded on failure.
@@ -120,15 +127,21 @@ scoped to that single tenant:
 - **Tenant-scoped storage.** A system of record, shared state for sessions
   and quotas, and a semantic search index — every read and write bound to
   one tenant.
+- **Strong consistency across instances.** Caches are keyed by content
+  version, so a republished profile is served correctly by every instance
+  on the next request — no stale answers and no single-writer bottleneck.
+  Background jobs elect one runner per interval through shared state.
 
 This diagram is intentionally high-level. Prompts, schemas, security
 controls, vendor choices, and service topology are deliberately omitted.
 
 ## Technology
 
-- **Backend:** Python — a single async web application serving all tenants
-- **AI:** frontier language-model APIs with retrieval-grounded generation
-  and cost-aware model routing
+- **Backend:** Python — one async web application, horizontally scalable,
+  serving all tenants
+- **AI:** frontier language-model APIs behind a provider seam (the base
+  model is one config flip), with streamed responses, retrieval-grounded
+  generation, and cost-aware model routing
 - **Frontend:** server-rendered pages with a deliberately no-build vanilla
   JavaScript layer and a token-based design system
 - **Data:** relational system of record, in-memory shared state, and a
